@@ -14,8 +14,8 @@ This project attempts to convert the TFLite Micro model into C code. Allow machi
 It will convert the quantized model of TFLite Micro's "[Hello World Example](https://github.com/tensorflow/tflite-micro/tree/main/tensorflow/lite/micro/examples/hello_world)" into the C source code.  
   
 * Modify the converted code (in the tflite_fw_c_code.c file), and add the main program:  
-
- ```  
+  
+  ```  
 void main() {
     float input_data = 1.57f;
     float output_data;
