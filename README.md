@@ -15,7 +15,7 @@ It will convert the quantized model of TFLite Micro's "[Hello World Example](htt
   
 * Modify the converted code (in the tflite_fw_c_code.c file), and add the main program:  
   
-  ```  
+```  
 void main() {
     float input_data = 1.57f;
     float output_data;
