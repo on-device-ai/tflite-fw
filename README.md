@@ -32,3 +32,9 @@ void main() {
 * Then execute the verification program and its execution result is as follows:  
 **$** ./test_main  
 1.04206  
+  
+### Verify under UEFI Shell  
+Verification can also be performed under [UEFI](https://uefi.org/) Shell. At this time, you need to install the [EDK2](https://github.com/tianocore/edk2) development environment. And I use the [emulator](https://github.com/tianocore/edk2/blob/master/EmulatorPkg/Readme.md) attached to EDK2 as the verification environment.  
+In addition, the [edk2-libc](https://github.com/tianocore/edk2-libc) library is required when compiling the verification application, and the completed source code can be downloaded from here: [https://tinyurl.com/2p727w3x](https://tinyurl.com/2p727w3x) . The execution result is as follows:  
+![230112](https://user-images.githubusercontent.com/44540872/212110306-6ad8e4ce-d07a-48d6-9dcc-7c8c2bfccb62.png)
+
