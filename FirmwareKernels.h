@@ -3,7 +3,7 @@
 
 #include <iostream>
 
-#include "TFLiteMicroBase.h"
+#include "TFLiteMicroUtil.h"
 #include "CodeWriter.h"
 
 // Support TFLite Micro OP List
@@ -24,6 +24,13 @@ class FirmwareKernels {
         }
         void WriteFirmwareKernelImplement(tflite::BuiltinOperator code,TfLiteType tensor_type);
         void WriteFirmwareNode(tflite::BuiltinOperator code,TfLiteType tensor_type,struct NodeInfo *node_info);
+
+    private:
+        void _gemmlowp_fixedpoint();
+
+    private:
+        void _fully_connected_float();
+        void _fully_connected_int8();
         
     private:
         CodeWriter *_wr = nullptr;

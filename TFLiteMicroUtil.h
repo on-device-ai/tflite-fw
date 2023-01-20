@@ -1,5 +1,5 @@
-#ifndef TFLITE_FW_TFLMBASE_H
-#define TFLITE_FW_TFLMBASE_H
+#ifndef TFLITE_FW_TFLMUTIL_H
+#define TFLITE_FW_TFLMUTIL_H
 
 #include "tensorflow/lite/micro/all_ops_resolver.h"
 #include "tensorflow/lite/micro/micro_error_reporter.h"

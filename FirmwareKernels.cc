@@ -8,55 +8,68 @@ void tflite_firmware::FirmwareKernels::WriteFirmwareKernelImplement(tflite::Buil
     if(code == tflite::BuiltinOperator_FULLY_CONNECTED) {
         if(tensor_type == kTfLiteFloat32) {
             if(_support_op_list[OP_FULLY_CONNECTED_FLOAT] == false) {                 
-
-*_wr << R"(
-/* FULLY_CONNECTED OP : Floating point implementation */
-void FULLY_CONNECTED_float(
-    const float* input, int32_t input_dim, const int32_t* input_shape,
-    const float* filter, int32_t filter_dim, const int32_t* filter_shape,
-    const float* bias, int32_t bias_dim, const int32_t* bias_shape,
-    float* output, int32_t output_dim, const int32_t* output_shape,
-    float output_activation_min,float output_activation_max)
-{
-    int32_t flat_size = 1;
-    int32_t batches = 0;
-    int32_t output_depth = 0;
-    int32_t accum_depth = 0;
-    int     i,b,out_c,d;
-    
-    for (i = 0; i < output_dim; ++i) {
-        flat_size *= (i == (output_dim-1)) ? 1 : output_shape[i];
-    }
-    batches = flat_size;
-    if(filter_shape[filter_dim-2] <= output_shape[output_dim-1]) {
-        output_depth = filter_shape[filter_dim-2];
-    } else {
-        output_depth = output_shape[output_dim-1];
-    }
-    accum_depth = filter_shape[filter_dim-1];
-
-    for (b = 0; b < batches; ++b) {
-        for (out_c = 0; out_c < output_depth; ++out_c) {
-            float total = 0.0f;
-            for (d = 0; d < accum_depth; ++d) {
-                total += input[b * accum_depth + d] * filter[out_c * accum_depth + d];
-            }
-            total += bias[out_c];
-            total = (total > output_activation_min) ? total : output_activation_min;
-            total = (total < output_activation_max) ? total : output_activation_max;
-            output[out_c + output_depth * b] = total;
-            
-        }
-    }  
-}
-)";
-
+                _fully_connected_float();
                 _support_op_list[OP_FULLY_CONNECTED_FLOAT] = true;
             }
                 
         } else if(tensor_type == kTfLiteInt8) {
             if(_support_op_list[OP_FULLY_CONNECTED_INT8] == false) {
                 if(_gemmlowp_fixedpoint_wrote == false) {
+                    _gemmlowp_fixedpoint();  
+                    _gemmlowp_fixedpoint_wrote = true;
+                }
+                _fully_connected_int8();
+                _support_op_list[OP_FULLY_CONNECTED_INT8] = true;
+            }
+        }
+    }    
+}
+
+void tflite_firmware::FirmwareKernels::WriteFirmwareNode(tflite::BuiltinOperator code,TfLiteType tensor_type,struct NodeInfo *node_info) {
+     auto &node = node_info->node;
+     
+     if(code == tflite::BuiltinOperator_FULLY_CONNECTED) {
+        uint8_t const *opdata = (uint8_t const *) node.builtin_data;
+           
+        if(tensor_type == kTfLiteFloat32) {
+            
+            *_wr << "    FULLY_CONNECTED_float(" << "\n";
+            *_wr << "        tensor" << std::to_string(node.inputs->data[0]) << "_data," << "\n";
+            *_wr << "        tensor" << std::to_string(node.inputs->data[0]) << "_ndim," << "tensor" << std::to_string(node.inputs->data[0]) << "_dims," << "\n";
+            *_wr << "        tensor" << std::to_string(node.inputs->data[1]) << "_data," << "\n";
+            *_wr << "        tensor" << std::to_string(node.inputs->data[1]) << "_ndim," << "tensor" << std::to_string(node.inputs->data[1]) << "_dims," << "\n";
+            *_wr << "        tensor" << std::to_string(node.inputs->data[2]) << "_data," << "\n";
+            *_wr << "        tensor" << std::to_string(node.inputs->data[2]) << "_ndim," << "tensor" << std::to_string(node.inputs->data[2]) << "_dims," << "\n";
+            *_wr << "        tensor" << std::to_string(node.outputs->data[0]) << "_data," << "\n";
+            *_wr << "        tensor" << std::to_string(node.outputs->data[0]) << "_ndim," << "tensor" << std::to_string(node.outputs->data[0]) << "_dims," << "\n";
+            if(opdata[0] == kTfLiteActNone) {
+                *_wr << "        " << std::numeric_limits<float>::lowest() << "," << std::numeric_limits<float>::max() << ");" << "\n" << "\n";
+            } else if (opdata[0] == kTfLiteActRelu) {
+                *_wr << "        " << 0.0f << "," << std::numeric_limits<float>::max() << ");" << "\n" << "\n";
+            }
+                
+        } else if(tensor_type == kTfLiteInt8) {
+                
+            auto* data = static_cast<tflite::OpDataFullyConnected*>(node.user_data);
+
+            *_wr << "    FULLY_CONNECTED_int8(" << "\n";
+            *_wr << "        tensor" << std::to_string(node.inputs->data[0]) << "_data," << "\n";
+            *_wr << "        tensor" << std::to_string(node.inputs->data[0]) << "_ndim," << "tensor" << std::to_string(node.inputs->data[0]) << "_dims," << "\n";
+            *_wr << "        tensor" << std::to_string(node.inputs->data[1]) << "_data," << "\n";
+            *_wr << "        tensor" << std::to_string(node.inputs->data[1]) << "_ndim," << "tensor" << std::to_string(node.inputs->data[1]) << "_dims," << "\n";
+            *_wr << "        tensor" << std::to_string(node.inputs->data[2]) << "_data," << "\n";
+            *_wr << "        tensor" << std::to_string(node.inputs->data[2]) << "_ndim," << "tensor" << std::to_string(node.inputs->data[2]) << "_dims," << "\n";
+            *_wr << "        tensor" << std::to_string(node.outputs->data[0]) << "_data," << "\n";
+            *_wr << "        tensor" << std::to_string(node.outputs->data[0]) << "_ndim," << "tensor" << std::to_string(node.outputs->data[0]) << "_dims," << "\n";
+            *_wr << "        " << -data->input_zero_point << "," << -data->filter_zero_point << ",\n";
+            *_wr << "        " << data->output_zero_point << "," << data->output_multiplier << "," << data->output_shift << ",\n";
+            *_wr << "        " << data->output_activation_min << "," << data->output_activation_max << ");" << "\n" << "\n";
+        }
+    }
+}
+
+
+inline void tflite_firmware::FirmwareKernels::_gemmlowp_fixedpoint() {
 
 *_wr << R"(
 /* --- gemmlowp : fixedpoint --- */
@@ -121,10 +134,58 @@ static int32_t MultiplyByQuantizedMultiplier(int32_t x,int32_t quantized_multipl
 
 /* ----------------------------- */
 )";
-                                             
-                    _gemmlowp_fixedpoint_wrote = true;
-                }
-                
+
+}
+
+inline void tflite_firmware::FirmwareKernels::_fully_connected_float() {
+
+*_wr << R"(
+/* FULLY_CONNECTED OP : Floating point implementation */
+void FULLY_CONNECTED_float(
+    const float* input, int32_t input_dim, const int32_t* input_shape,
+    const float* filter, int32_t filter_dim, const int32_t* filter_shape,
+    const float* bias, int32_t bias_dim, const int32_t* bias_shape,
+    float* output, int32_t output_dim, const int32_t* output_shape,
+    float output_activation_min,float output_activation_max)
+{
+    int32_t flat_size = 1;
+    int32_t batches = 0;
+    int32_t output_depth = 0;
+    int32_t accum_depth = 0;
+    int     i,b,out_c,d;
+    
+    for (i = 0; i < output_dim; ++i) {
+        flat_size *= (i == (output_dim-1)) ? 1 : output_shape[i];
+    }
+    batches = flat_size;
+    if(filter_shape[filter_dim-2] <= output_shape[output_dim-1]) {
+        output_depth = filter_shape[filter_dim-2];
+    } else {
+        output_depth = output_shape[output_dim-1];
+    }
+    accum_depth = filter_shape[filter_dim-1];
+
+    for (b = 0; b < batches; ++b) {
+        for (out_c = 0; out_c < output_depth; ++out_c) {
+            float total = 0.0f;
+            for (d = 0; d < accum_depth; ++d) {
+                total += input[b * accum_depth + d] * filter[out_c * accum_depth + d];
+            }
+            total += bias[out_c];
+            total = (total > output_activation_min) ? total : output_activation_min;
+            total = (total < output_activation_max) ? total : output_activation_max;
+            output[out_c + output_depth * b] = total;
+            
+        }
+    }  
+}
+)";
+
+}
+
+
+inline void tflite_firmware::FirmwareKernels::_fully_connected_int8() {
+
 *_wr << R"(
 /* FULLY_CONNECTED OP : Quantized 8-bit integer implementation */
 void FULLY_CONNECTED_int8(
@@ -170,54 +231,7 @@ void FULLY_CONNECTED_int8(
         }
     } 
 }                
-)";                                 
-               
-                _support_op_list[OP_FULLY_CONNECTED_INT8] = true;
-            }
-        }
-    }    
-}
+)";
 
-void tflite_firmware::FirmwareKernels::WriteFirmwareNode(tflite::BuiltinOperator code,TfLiteType tensor_type,struct NodeInfo *node_info) {
-     auto &node = node_info->node;
-     
-     if(code == tflite::BuiltinOperator_FULLY_CONNECTED) {
-        uint8_t const *opdata = (uint8_t const *) node.builtin_data;
-           
-        if(tensor_type == kTfLiteFloat32) {
-            
-            *_wr << "    FULLY_CONNECTED_float(" << "\n";
-            *_wr << "        tensor" << std::to_string(node.inputs->data[0]) << "_data," << "\n";
-            *_wr << "        tensor" << std::to_string(node.inputs->data[0]) << "_ndim," << "tensor" << std::to_string(node.inputs->data[0]) << "_dims," << "\n";
-            *_wr << "        tensor" << std::to_string(node.inputs->data[1]) << "_data," << "\n";
-            *_wr << "        tensor" << std::to_string(node.inputs->data[1]) << "_ndim," << "tensor" << std::to_string(node.inputs->data[1]) << "_dims," << "\n";
-            *_wr << "        tensor" << std::to_string(node.inputs->data[2]) << "_data," << "\n";
-            *_wr << "        tensor" << std::to_string(node.inputs->data[2]) << "_ndim," << "tensor" << std::to_string(node.inputs->data[2]) << "_dims," << "\n";
-            *_wr << "        tensor" << std::to_string(node.outputs->data[0]) << "_data," << "\n";
-            *_wr << "        tensor" << std::to_string(node.outputs->data[0]) << "_ndim," << "tensor" << std::to_string(node.outputs->data[0]) << "_dims," << "\n";
-            if(opdata[0] == kTfLiteActNone) {
-                *_wr << "        " << std::numeric_limits<float>::lowest() << "," << std::numeric_limits<float>::max() << ");" << "\n" << "\n";
-            } else if (opdata[0] == kTfLiteActRelu) {
-                *_wr << "        " << 0.0f << "," << std::numeric_limits<float>::max() << ");" << "\n" << "\n";
-            }
-                
-        } else if(tensor_type == kTfLiteInt8) {
-                
-            auto* data = static_cast<tflite::OpDataFullyConnected*>(node.user_data);
-
-            *_wr << "    FULLY_CONNECTED_int8(" << "\n";
-            *_wr << "        tensor" << std::to_string(node.inputs->data[0]) << "_data," << "\n";
-            *_wr << "        tensor" << std::to_string(node.inputs->data[0]) << "_ndim," << "tensor" << std::to_string(node.inputs->data[0]) << "_dims," << "\n";
-            *_wr << "        tensor" << std::to_string(node.inputs->data[1]) << "_data," << "\n";
-            *_wr << "        tensor" << std::to_string(node.inputs->data[1]) << "_ndim," << "tensor" << std::to_string(node.inputs->data[1]) << "_dims," << "\n";
-            *_wr << "        tensor" << std::to_string(node.inputs->data[2]) << "_data," << "\n";
-            *_wr << "        tensor" << std::to_string(node.inputs->data[2]) << "_ndim," << "tensor" << std::to_string(node.inputs->data[2]) << "_dims," << "\n";
-            *_wr << "        tensor" << std::to_string(node.outputs->data[0]) << "_data," << "\n";
-            *_wr << "        tensor" << std::to_string(node.outputs->data[0]) << "_ndim," << "tensor" << std::to_string(node.outputs->data[0]) << "_dims," << "\n";
-            *_wr << "        " << -data->input_zero_point << "," << -data->filter_zero_point << ",\n";
-            *_wr << "        " << data->output_zero_point << "," << data->output_multiplier << "," << data->output_shift << ",\n";
-            *_wr << "        " << data->output_activation_min << "," << data->output_activation_max << ");" << "\n" << "\n";
-        }
-    }
 }
 

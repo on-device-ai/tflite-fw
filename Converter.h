@@ -3,7 +3,7 @@
 
 #include <iostream>
 
-#include "TFLiteMicroBase.h"
+#include "TFLiteMicroUtil.h"
 
 namespace tflite_firmware {
 
