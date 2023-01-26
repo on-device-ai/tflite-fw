@@ -1,15 +1,22 @@
 #include "Converter.h"
 
-// For Test Only
 int main(int argc, char *argv[]) {
-#ifdef NO_QUANT_MODEL
-    if (!tflite_firmware::ConverterFile("model_no_quant.tflite", "tflite_fw_c_code.c")) {
+    
+    if (argc < 2) {
+        printf("Usage: %s modelFile.tflite [outFile.c]\n",argv[0]);
         return 1;
     }
-#else
-    if (!tflite_firmware::ConverterFile("model.tflite", "tflite_fw_c_code.c")) {
+    
+    std::string tflite_model_file_name = argv[1];
+    
+    std::string output_file_name = "tflite_fw_c_code.c";
+    if (argc == 3) {
+        output_file_name = argv[2];
+    }
+    
+    if (!tflite_firmware::ConverterFile(tflite_model_file_name, output_file_name)) {
         return 1;
     }
-#endif
+
     return 0;
 }
